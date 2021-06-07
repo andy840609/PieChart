@@ -13,7 +13,7 @@
 
 ## 用法
 
-1. 引入d3、jquery、bootstrap 和 sacPlot.js、sacPlot.css
+1. 引入d3、jquery、bootstrap 和 pie.js、pie.css
 ```javascript
     <script src="../src/jquery/jquery-3.5.1.min.js"></script>
     <script src="../src/d3/d3.min.js"></script>
