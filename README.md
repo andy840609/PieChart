@@ -15,12 +15,12 @@
 
 1. 引入d3、jquery、bootstrap 和 sacPlot.js、sacPlot.css
 ```javascript
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" crossorigin="anonymous">
-<script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
-<script src="https://d3js.org/d3.v6.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-<link href="path/to/sacPlot.css" rel="stylesheet">
-<script src="path/to/sacPlot.js"></script>
+    <script src="../src/jquery/jquery-3.5.1.min.js"></script>
+    <script src="../src/d3/d3.min.js"></script>
+    <script src="../src/bootstrap-4.5.3-dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../src/pie.js"></script>
+    <link rel="stylesheet" href="../src/bootstrap-4.5.3-dist/css/bootstrap.min.css">
+    <link href="../src/pie.css" rel="stylesheet">
 ```
 2. pieChart().data()裡面填入物件陣列,每個物件都當作一組pie圖（不同年份的圖要分開畫的時候）
 
