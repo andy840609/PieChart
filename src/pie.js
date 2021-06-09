@@ -4,45 +4,6 @@ function pieChart() {
     var data = [];
 
 
-    function init() {
-        $(selector).append(`
-            <form id="form-chart">
-            <div class="form-group" id="chartsOptions" style="display: inline;position: absolute; top: 3em; left: 3em;  z-index:3;">
-            <div class="row">
-                <div class="form-group col-lg-3 col-md-3 col-sm-6" >
-                    <button type="button" class="btn btn-secondary" id="reset">
-                        reset
-                    </button>
-                </div>
-            </div>
-            </div> 
-                <div class="form-group" id="charts" style="position: relative; z-index:0;"></div>          
-                <div id="outerdiv"
-                    style="position:fixed;top:0;left:0;background:rgba(0,0,0,0.7);z-index:999;width:100%;height:100%;display:none;">
-                    <div id="innerdiv" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">
-                        <img id="bigimg" style=" background-color: rgb(255, 255, 255);" src="" />
-                    </div>
-                </div>
-            </form>
-            `);
-
-        $('#reset').click(() => {
-            chart();
-        });
-
-        d3.select("#form-chart").append("div")
-            .attr("id", "tooltip")
-            .style('position', 'absolute')
-            .style('z-index', '1')
-            .style("opacity", 0)
-            .style('display', 'none');
-
-        //==========test=====
-        // $('body').on("mouseover", function (e) {
-        //     console.debug(e.target.nodeName);
-        // })
-        //===================
-    };
 
     chart.selector = (vaule) => {
         selector = vaule;
@@ -182,6 +143,41 @@ function pieChart() {
         return chart;
     }
     function chart() {
+        function init() {
+            $(selector).append(`
+                <form id="form-chart">
+                <div class="form-group" id="chartsOptions" style="display: inline;position: absolute; top: 3em; left: 3em;  z-index:3;">
+                <div class="row">
+                </div>
+                </div> 
+                    <div class="form-group" id="charts" style="position: relative; z-index:0;"></div>          
+                    <div id="outerdiv"
+                        style="position:fixed;top:0;left:0;background:rgba(0,0,0,0.7);z-index:999;width:100%;height:100%;display:none;">
+                        <div id="innerdiv" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">
+                            <img id="bigimg" style=" background-color: rgb(255, 255, 255);" src="" />
+                        </div>
+                    </div>
+                </form>
+                `);
+
+            // $('#reset').click(() => {
+            //     chart();
+            // });
+
+            d3.select("#form-chart").append("div")
+                .attr("id", "tooltip")
+                .style('position', 'absolute')
+                .style('z-index', '1')
+                .style("opacity", 0)
+                .style('display', 'none');
+
+            //==========test=====
+            // $('body').on("mouseover", function (e) {
+            //     console.debug(e.target.nodeName);
+            // })
+            //===================
+        };
+
         function PieSvg(Data) {
             // console.debug(Data);
             var data = Data.data;
@@ -246,7 +242,7 @@ function pieChart() {
                 .text("GDMS");
 
 
-            var color = (network, dataGroup = 1) => {
+            var getColor = (network, dataGroup = 1) => {
                 let color;
                 if (dataGroup == 1)
                     switch (network) {
@@ -347,7 +343,7 @@ function pieChart() {
 
                 pie
                     .append("path")
-                    .attr("fill", d => color(d.data[dataKey[0]], dataGroup))
+                    .attr("fill", d => getColor(d.data[dataKey[0]], dataGroup))
                     .attr("d", arc)
                     .attr("position", "relative")
                     .attr("z-index", 100)
@@ -359,9 +355,7 @@ function pieChart() {
                     .append("g")
                     .attr("class", "text")
                     .attr("fill", "currentcolor")
-                    .attr("color", "black")
                     .attr("font-family", "sans-serif")
-                    .attr("font-size", 12)
                     .attr("font-weight", "bold")
                     .attr("text-anchor", "middle")
                     .attr("position", "relative")
@@ -369,10 +363,49 @@ function pieChart() {
                     .append("text")
                     .attr("transform", d => `translate(${arc.centroid(d)})`)
                     .call(text => {
-                        text.filter(d => !isSmallPie(d)).append("tspan")
-                            .attr("y", "-0.4em")
-                            .text(d => d.data[dataKey[0]]);
+                        //===largePie
+                        text.filter(d => !isSmallPie(d))
+                            .attr("color", d => {
+                                let textColor;
+                                let Y = 120;//大於這個明亮度當成淺色
+                                let pieColor = getColor(d.data[dataKey[0]], dataGroup);
+                                let rgb = {
+                                    r: parseInt(pieColor.substring(1, 3), 16),
+                                    g: parseInt(pieColor.substring(3, 5), 16),
+                                    b: parseInt(pieColor.substring(5, 7), 16),
+                                }
+                                if (rgb.r * 0.299 + rgb.g * 0.578 + rgb.b * 0.114 >= Y)  //浅色
+                                    textColor = 'black';
+                                else  //深色
+                                    textColor = '#F0F0F0';
 
+                                // console.debug(rgb);
+                                return textColor;
+                            })
+                            .append("tspan")
+                            .attr("y", "-0.4em")
+                            .attr("font-size", d => {
+                                let textSize = 12;
+                                let arc = d.endAngle - d.startAngle;
+                                let textLength = d.data[dataKey[0]].length;
+                                if (arc < 0.5 && textLength >= 6)
+                                    textSize = 10
+                                return textSize;
+                            })
+                            .text(d => d.data[dataKey[0]])
+                            .append("tspan")
+                            .attr("x", 0)
+                            .attr("y", "0.7em")
+                            .attr("fill-opacity", 0.7)
+                            .attr("font-size", 10)
+                            .attr("font-weight", 500)
+                            .text(d => d.data[dataKey[dataGroup]])
+                            .append("tspan")
+                            .attr("font-size", 7)
+                            .attr("font-weight", "normal")
+                            .text(dataKeyName[dataGroup].unit);
+
+                        //===smallPie
                         var smallPie = text.filter(d => isSmallPie(d));
                         smallPie.nodes().forEach(d => {
                             let label = d3.select(d.parentNode);
@@ -397,33 +430,19 @@ function pieChart() {
                                 .attr('class', 'label')
                                 .select('text')
                                 .attr('dy', '.35em')
+                                .attr("color", "black")
+                                .attr("font-size", 12)
                                 .text(d => d.data[dataKey[0]]);
 
                             setTimeout(() => label.call(relax), labelMove(label, labelRadius));
                             // labelMove(label, labelRadius)
                         });
 
-                    })
-                    .call(text => text.filter(d => !isSmallPie(d))
-                        .append("tspan")
-                        .attr("x", 0)
-                        .attr("y", "0.7em")
-                        .attr("fill-opacity", 0.7)
-                        .attr("font-size", 10)
-                        .attr("font-weight", 500)
-                        .text(d => d.data[dataKey[dataGroup]].toLocaleString())
-                        .append("tspan")
-                        .attr("font-size", 7)
-                        .attr("font-weight", "normal")
-                        .text(dataKeyName[dataGroup].unit)
-                    );
+                    });
+
 
                 function isSmallPie(data) {
-                    var isSmallPie;
-                    if (data.endAngle - data.startAngle < 0.25)
-                        isSmallPie = true;
-                    else
-                        isSmallPie = false;
+                    let isSmallPie = data.endAngle - data.startAngle < 0.25;
                     return isSmallPie;
                 }
                 function labelMove(relaxLabel, labelRadius, duration = 0, circleMove = true) {
