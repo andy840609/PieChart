@@ -2,14 +2,90 @@ function pieChart() {
 
     var selector = 'body';
     var data = [];
+    const convert_download_unit = (value, unitBefore, unitAfter = undefined) => {
+        let newValue, newUnit;
+        const unit1 = ['b', 'B'];
+        const unit2 = ['', 'K', 'M', 'G', 'T'];
+
+
+        var getUnit = (unit) => {
+            let unit1, unit2;
+
+            if (unit.length > 1) {
+                unit1 = unit[1];
+                unit2 = unit[0];
+            }
+            else if (unit.length == 1) {
+                unit1 = unit;
+                unit2 = '';
+            }
+
+            return {
+                unit1: unit1,
+                unit2: unit2,
+            }
+        }
+        var getRatio = (unitA, unitB, unitArr, powerBase) => {
+            let ratio;
+            let A_index = unitArr.indexOf(unitA);
+            let B_index = unitArr.indexOf(unitB);
+
+            if (A_index != -1 && B_index != -1) {
+                let power = A_index - B_index;
+                ratio = Math.pow(powerBase, power);
+            }
+            else {
+                ratio = 1;
+            }
+            return ratio;
+        }
+
+        let unitBefore_obj = getUnit(unitBefore);
+
+        if (unitAfter) {//unitBefore 單位轉換到 unitAfter
+            let unitAfter_obj = getUnit(unitAfter);
+            let ratio1 = getRatio(unitBefore_obj.unit1, unitAfter_obj.unit1, unit1, 8);
+            let ratio2 = getRatio(unitBefore_obj.unit2, unitAfter_obj.unit2, unit2, 1024);
+            // console.debug(unitBefore_obj, unitAfter_obj);
+            // console.debug(ratio1, ratio2);
+            newValue = value * ratio1 * ratio2;
+            newUnit = unitAfter;
+        }
+        else {//unitBefore 單位轉換到 value>=1或單位已是最小(b)為止 ,並給newUnit
+
+            let unit1_index = unit1.indexOf(unitBefore_obj.unit1);
+            let unit2_index = unit2.indexOf(unitBefore_obj.unit2);
+            newValue = value;
+            // let newUnit1 = unitBefore_unit1, newUnit2 = unitBefore_unit2;
+
+            while (newValue < 1 && (unit1_index != 0 || unit2_index != 0)) {
+                //先轉unit2,不夠才轉unit1
+                if (unit2_index > 0) {
+                    unit2_index -= 1;
+                    newValue *= 1024;
+                } else {
+                    unit1_index -= 1;
+                    newValue *= 8;
+                }
+
+            }
+            newUnit = unit2[unit2_index] + unit1[unit1_index];
+
+        }
+
+        return {
+            value: newValue,
+            unit: newUnit,
+        };
+    };
 
     chart.selector = (vaule) => {
         selector = vaule;
         return chart;
-    }
+    };
 
     chart.data = (vaule) => {
-        console.log(vaule);
+        // console.log(vaule);
         data = [];
         const columns = ['DB', 'count', 'size'];
         let dataType = typeof (vaule[0]);
@@ -92,50 +168,64 @@ function pieChart() {
             });
         }
         else if (dataType == 'object') {
-            data = vaule;
+            const convertData = function (data) {
 
-            // data = vaule.map(v => {
-            //     let dataObj = v.data;
-            //     let Objkeys = Object.getOwnPropertyNames(dataObj);
-            //     let countObj = dataObj[Objkeys[0]];
-            //     let sizeObj = dataObj[Objkeys[1]];
-            //     // console.debug(v);
-            //     // console.debug(Objkeys[0]);
-            //     let DBKeys = Object.getOwnPropertyNames(countObj).filter(key => key != 'total');
+                let dataObj = data;
+                let Objkeys = Object.getOwnPropertyNames(dataObj).filter(key => key != 'columns');
+                // console.debug(Objkeys);
 
-            //     const dataUnit = 'GB';
-            //     let chartData = DBKeys.map(key => {
-            //         let obj = {};
-            //         obj[columns[0]] = key;
-            //         obj[columns[1]] = countObj[key];
+                Objkeys.forEach((Objkey, index, arr) => {
+                    let obj = dataObj[Objkey];
+                    let DBKeys = Object.getOwnPropertyNames(obj).filter(key => key != 'columns');
+                    obj.columns = DBKeys;
+                    // console.debug(DBKeys);
 
-            //         let sizeArr = sizeObj[key].split(' ');
-            //         let size = parseFloat(sizeArr[0]);
-            //         size = convert_download_unit(size, sizeArr[1], dataUnit).value;
 
-            //         // let aaa = convert_download_unit(2, 'MB', 'KB');
-            //         // let aaa = convert_download_unit(0.000000002, 'MB');
-            //         // console.debug(aaa);
-            //         obj[columns[2]] = size;
-            //         return obj;
-            //     })
-            //     chartData.columns = columns;
-            //     chartData.sizeUnit = dataUnit;
+                    if (Objkey == 'file_size') //==file_size
+                    {
+                        // console.debug(obj);
+                        const dataUnit = 'GB';
+                        DBKeys.forEach(DBkey => {
+                            if (typeof (obj[DBkey]) == 'string') {
+                                // console.debug(obj[DBkey]);
+                                let sizeArr = obj[DBkey].split(' ');
+                                let size = parseFloat(sizeArr[0]);
+                                let unit = sizeArr[1];
+                                obj[DBkey] = convert_download_unit(size, unit, dataUnit).value;
+                            }
+                        });
 
-            //     return {
-            //         data: chartData,
-            //         title: v.title,
-            //     };
-            // });
+                        // obj.sizeUnit = dataUnit;
+                    }
+
+                });
+                dataObj.columns = Objkeys.filter(key => {
+                    // console.debug(dataObj[key].total);
+                    let boolean = true;
+                    if (dataObj[key].hasOwnProperty('total'))
+                        if (dataObj[key].total == 0)
+                            boolean = false;
+                    return boolean;
+                });
+                // console.debug(dataObj);
+                return dataObj;
+            };
+            // console.debug(vaule);
+            data = vaule.map(v => {
+                // console.debug(v);
+                v.data = convertData(v.data);
+                return v;
+            });
+
+
 
         }
         else {
             console.debug("unknow dataType");
         }
-
         // console.debug(data);
         return chart;
-    }
+    };
     function chart() {
         function init() {
             $(selector).append(`
@@ -174,82 +264,7 @@ function pieChart() {
 
         function PieSvg(Data) {
             // console.debug(Data);
-            const convert_download_unit = (value, unitBefore, unitAfter = undefined) => {
-                let newValue, newUnit;
-                const unit1 = ['b', 'B'];
-                const unit2 = ['', 'K', 'M', 'G', 'T'];
 
-
-                var getUnit = (unit) => {
-                    let unit1, unit2;
-
-                    if (unit.length > 1) {
-                        unit1 = unit[1];
-                        unit2 = unit[0];
-                    }
-                    else if (unit.length == 1) {
-                        unit1 = unit;
-                        unit2 = '';
-                    }
-
-                    return {
-                        unit1: unit1,
-                        unit2: unit2,
-                    }
-                }
-                var getRatio = (unitA, unitB, unitArr, powerBase) => {
-                    let ratio;
-                    let A_index = unitArr.indexOf(unitA);
-                    let B_index = unitArr.indexOf(unitB);
-
-                    if (A_index != -1 && B_index != -1) {
-                        let power = A_index - B_index;
-                        ratio = Math.pow(powerBase, power);
-                    }
-                    else {
-                        ratio = 1;
-                    }
-                    return ratio;
-                }
-
-                let unitBefore_obj = getUnit(unitBefore);
-
-                if (unitAfter) {//unitBefore 單位轉換到 unitAfter
-                    let unitAfter_obj = getUnit(unitAfter);
-                    let ratio1 = getRatio(unitBefore_obj.unit1, unitAfter_obj.unit1, unit1, 8);
-                    let ratio2 = getRatio(unitBefore_obj.unit2, unitAfter_obj.unit2, unit2, 1024);
-                    // console.debug(unitBefore_obj, unitAfter_obj);
-                    // console.debug(ratio1, ratio2);
-                    newValue = value * ratio1 * ratio2;
-                    newUnit = unitAfter;
-                }
-                else {//unitBefore 單位轉換到 value>=1或單位已是最小(b)為止 ,並給newUnit
-
-                    let unit1_index = unit1.indexOf(unitBefore_obj.unit1);
-                    let unit2_index = unit2.indexOf(unitBefore_obj.unit2);
-                    newValue = value;
-                    // let newUnit1 = unitBefore_unit1, newUnit2 = unitBefore_unit2;
-
-                    while (newValue < 1 && (unit1_index != 0 || unit2_index != 0)) {
-                        //先轉unit2,不夠才轉unit1
-                        if (unit2_index > 0) {
-                            unit2_index -= 1;
-                            newValue *= 1024;
-                        } else {
-                            unit1_index -= 1;
-                            newValue *= 8;
-                        }
-
-                    }
-                    newUnit = unit2[unit2_index] + unit1[unit1_index];
-
-                }
-
-                return {
-                    value: newValue,
-                    unit: newUnit,
-                };
-            }
             const getDataKeyString = (key) => {
                 // console.debug(key);
                 let keyName = key;
@@ -320,42 +335,7 @@ function pieChart() {
             };
             const width = 500;
             const height = 500;
-            const data = function () {
-
-                let dataObj = Data.data;
-                let Objkeys = Object.getOwnPropertyNames(dataObj);
-                // console.debug(Objkeys);
-
-                Objkeys.forEach((Objkey, index, arr) => {
-                    let obj = dataObj[Objkey];
-                    let DBKeys = Object.getOwnPropertyNames(obj);
-                    obj.columns = DBKeys;
-
-                    if (Objkey == 'file_size') //==file_size
-                    {
-                        const dataUnit = 'GB';
-                        DBKeys.forEach(DBkey => {
-                            let sizeArr = obj[DBkey].split(' ');
-                            let size = parseFloat(sizeArr[0]);
-                            let unit = sizeArr[1];
-
-                            obj[DBkey] = convert_download_unit(size, unit, dataUnit).value;
-                        });
-                        obj.sizeUnit = dataUnit;
-                    }
-
-                });
-                dataObj.columns = Objkeys.filter(key => {
-                    // console.debug(dataObj[key].total);
-                    let boolean = true;
-                    if (dataObj[key].hasOwnProperty('total'))
-                        if (dataObj[key].total == 0)
-                            boolean = false;
-                    return boolean;
-                });
-                return dataObj;
-            }();
-            console.debug(data);
+            const data = Data.data;
 
             const dataKey = data.columns;
 
@@ -663,7 +643,7 @@ function pieChart() {
 
                     }
                     function relax(label) {
-                        console.log("collide checking...");
+                        // console.log("collide checking...");
 
                         var thisLabel_node = label.node();
                         var thisPie_node = thisLabel_node.parentNode;
@@ -706,7 +686,7 @@ function pieChart() {
 
                             if (Math.abs(a_textY - b_textY) < spacing) {
                                 // if (dist < spacing) {
-                                console.log("RELAXing");
+                                // console.log("RELAXing");
                                 var circleMove = false;
                                 let labelRadius = b.data()[0].labelRadius;
                                 labelRadius += spacing;
@@ -1135,7 +1115,6 @@ function pieChart() {
 
             }
             data.forEach(d => {
-                // console.debug(d.data);
                 let chartNode = PieSvg(d);
                 // console.debug(chartNode);
                 getChartMenu('A');
